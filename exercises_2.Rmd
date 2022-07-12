@@ -214,3 +214,104 @@ model.test_on_batch(X_test, y_test, return_dict=True)
 tf.keras.utils.plot_model(model)
 
 ```
+
+
+
+
+## MNIST
+
+MNIST data
+
+The MNIST is a database of handwritten digits, and is commonly used for training various image processing systems. The training set contains 60K examples, and the text set contains 10K examples.
+
+- Load the data.
+
+```{python}
+from keras.datasets import mnist
+
+(X_train, y_train), (X_test, y_test)  = mnist.load_data()
+
+X_train.shape
+```
+
+- Create a min_max_normalization function, and apply it on the data.
+
+```{python}
+from sklearn.preprocessing import MinMaxScaler
+
+
+scaler = MinMaxScaler()
+X_train = scaler.fit_transform(X_train.reshape(-1, X_train.shape[-1])).reshape(X_train.shape)
+X_test = scaler.transform(X_test.reshape(-1, X_test.shape[-1])).reshape(X_test.shape)
+
+```
+
+- Plot the few of the images1.
+    
+```{python}
+from matplotlib import pyplot
+for i in range(9):  
+  pyplot.subplot(3, 3, i+1)
+  pyplot.imshow(train_X[i+5], cmap=pyplot.get_cmap('gray'))
+
+pyplot.show()
+
+```
+
+- Use the nnet package and perform multinomial regression.
+
+- Use the predict function to predict the test data.
+
+- Create a confusion matrix2, and compute the accuracy. We will later compare it to our neural network model.
+
+- Create a neural network model in Keras. Choose yourself the number of neurons, batch size, and the number of epochs. Use first a gradient descent optimizer.
+
+```{python}
+model = keras.Sequential()
+
+model.add(tf.keras.Input(shape=(28,28)))
+
+model.add(layers.Flatten())
+
+model.add(layers.Dense(
+  512, # Amount of Neuron # Define an input dimension because this is the first layer
+  activation='relu' # Use relu activation function because all inputs are positive
+))
+
+model.add(layers.Dense(
+    10, # Amount of Neurons. We want one output
+    activation='softmax' # Use sigmoid because we want to output a binary classification
+))
+
+model.compile(
+    loss= tf.keras.losses.SparseCategoricalCrossentropy(), # The loss function that is being minimized
+    optimizer=tf.keras.optimizers.SGD(),
+    metrics=['accuracy', 'mse'] 
+)
+
+
+```
+
+```{python}
+model.fit(
+    X_train, # Input training data
+    y_train, # Output training data
+    epochs=5, # Amount of iterations we want to train for
+    verbose=1 # Amount of detail you want shown in terminal while training
+)
+
+```
+
+```{python}
+from sklearn.metrics import confusion_matrix
+
+predictions = model.predict(X_test).argmax(axis = 1)
+
+confusion_matrix(y_test, predictions)
+```
+
+```{python}
+model.summary()
+```
+
+- Keep all your chosen settings, but use the ADAM optimizer now.

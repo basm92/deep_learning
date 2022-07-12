@@ -1,0 +1,342 @@
+---
+title: "Exercise 1 solution"
+author: ""
+date: ""
+output: 
+  html_document:
+    toc: true
+    number_sections: false
+    theme: cerulean
+    highlight: espresso
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+library(purrr)
+```
+
+## Solution
+
+```{r c1}
+#  Setup  --------------------
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# install.packages("magrittr")
+# install.packages("psych")
+library(magrittr)
+library(MASS)
+library(psych)
+
+#  GD  ------------
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+par( mfrow = c(2,2), bg = 'white')
+
+x <- runif(1000, -5, 5)
+y <- x + rnorm(1000) + 3
+
+res <- lm( y ~ x )$res
+cost <- function(X, y, theta) {
+	sum( (X %*% theta - y)^2 ) / (2*length(y))
+}
+# learning rate and iteration limit1
+alpha <- 0.01
+num_iters <- 1000
+# keep history
+cost_history <- double(num_iters)
+theta_history <- list()
+# initialize coefficients
+theta <- matrix(c(0,0), nrow=2)
+# add a column of 1's for the intercept coefficient
+X <- cbind(1, matrix(x))
+# gradient descent
+for (i in 1:num_iters) {
+	error <- (X %*% theta - y)
+	delta <- t(X) %*% error / length(y)
+	theta <- theta - alpha * delta
+	cost_history[i] <- cost(X, y, theta)
+	theta_history[[i]] <- theta
+}
+print(theta)
+
+plot(x, y, col = rgb(0.2, 0.4, 0.6, 0.4), main = "Linear regression by gradient descent")
+for (i in c(1, 3, 6, 10, 14, seq(20, num_iters, by = 10)) ) {
+	abline(coef = theta_history[[i]], col = rgb(0.8, 0, 0, 0.3))
+}
+abline(coef = theta, col = "blue")
+plot(cost_history, type = "l", col = "blue", lwd = 2, 
+					main = "Cost function", ylab = "cost", xlab = "Iterations")
+
+```
+
+
+```{r c2}
+#  Boston  ------------
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~
+library(MASS)
+# First dataset:
+names(Boston)
+# predict how many house will have median house price 200K, using logtistic regression
+y <- ifelse(Boston$medv > 20, 1, 0)
+# Add out target to the data, and remove the median from the data
+Boston$y <- y
+Boston$medv <- NULL
+# Divide data into Train and test
+set.seed(55)
+TT <- NROW(Boston)
+tmp_ind <- sample(1:TT, size = TT / 2)
+
+trainn <- Boston[tmp_ind, ]
+testt <- Boston[-tmp_ind, ]
+
+scale_train <- apply(trainn[,1:13], 2, scale) %>% as.data.frame
+scale_train <- data.frame(y= trainn$y, scale_train)
+
+logregs <- glm(y ~ ., data = scale_train, family = binomial)
+summary(logregs)
+
+scale_test <- apply(testt[,1:13], 2, scale) %>% as.data.frame
+
+# confusion matrix function
+confuse_tab_fun <- function(pred) {
+	confuse_tab <- table(actual = testt$y, predict = pred > 0.5)
+	tmpp <- (confuse_tab[1, 1] + confuse_tab[2, 2]) / sum(confuse_tab)
+	return(tmpp)  
+}
+
+pred_glm <-predict(logregs, newdata = scale_test, type = "response")
+# names(testt)
+# confusion matrix
+confuse_tab <- confuse_tab_fun(pred_glm)
+cat("The number to beat:", formatC(confuse_tab, 3))
+
+# Now with neural net
+# install.packages("neuralnet")
+library(neuralnet)
+col_names <- trainn %>% names
+
+tmp_formula <- as.formula(paste("y ~", paste(col_names[1:13], collapse = " + ")))
+
+nn <- neuralnet(
+  tmp_formula,
+  data = scale_train,
+  hidden = c(4),
+  algorithm = "backprop",
+  stepmax = 10 ^ 6,
+  linear.output = F,
+  learningrate = 10 ^ (-2),
+  lifesign = "full",
+  threshold = 0.1,
+  err.fct = "sse",
+  act.fct = "logistic"
+)
+
+prednn1 <- predict(nn, newdata= cbind(1, scale_test) )
+confuse_tab_fun(prednn1)
+plot(nn)
+
+gc() # Collect garbage to free memory
+
+repp <- 5
+nn <- neuralnet(
+  tmp_formula,
+  data = scale_train,
+  hidden = c(4, 4),
+  algorithm = "backprop",
+  # "rprop+",
+  stepmax = 10 ^ 5,
+  linear.output = F,
+  learningrate = 10 ^ (-2),
+  lifesign = "full",
+  threshold = 0.15,
+  err.fct = "sse",
+  act.fct = "logistic",
+  rep = repp
+)
+
+accuracyy <- NULL
+prednn1 <- matrix(nrow = NROW(scale_test), ncol = repp)
+for (i in 1:repp) {
+  prednn1[, i] <- predict(nn, newdata= cbind(1, scale_test) )
+  accuracyy[i] <- confuse_tab_fun(prednn1[, i])
+}
+print(accuracyy)
+# For the average
+confuse_tab_fun(apply(prednn1, 1, mean))
+
+```
+
+### Multinomial regression
+```{r c3, cache = TRUE}
+library(tidyverse)
+library(keras)
+Show_label <- function(row, data) {
+  tmp <- data.frame(
+    x = rep(1:28, times = 28),
+    y = rep(28:1, each = 28),
+    shade = as.numeric(data[row, -1])
+  )
+  ggplot(data = tmp) +
+    geom_point(aes(x = x, y = y, color = shade), size = 11, shape = 15) +
+    theme(
+      axis.line = element_blank(),
+      axis.text.x = element_blank(), axis.text.y = element_blank(),
+      axis.ticks = element_blank(), axis.title.x = element_blank(),
+      axis.title.y = element_blank(), legend.position = "none", panel.background = element_blank(),
+      panel.border = element_blank(), panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(), plot.background = element_blank()
+    ) +
+    scale_color_gradient(low = "white", high = "black") +
+    geom_text(aes(x = 28, y = 28), label = data[row, 1])
+}
+
+mnist <- dataset_mnist()
+str(mnist)
+
+x_train <- mnist$train$x
+y_train <- mnist$train$y
+x_test <- mnist$test$x
+y_test <- mnist$test$y
+
+n_train <- NROW(x_train)
+n_test <- NROW(x_test)
+
+trainn <-  matrix(nrow= n_train, ncol= 785)
+for(i in 1:n_train){
+  trainn[i,2:785] <- t(x_train[i,,])
+}
+trainn[,1] <- y_train
+
+testt <- matrix(nrow= n_test, ncol= 785)
+for(i in 1:n_test){
+  testt[i,2:785] <- t(x_test[i,,])
+}
+testt[,1] <- y_test
+
+ii <- 457
+Show_label(ii, trainn) 
+Show_label(ii, data= testt) 
+
+# Let's first check Multinomial regression
+library(nnet)
+
+scale_norm <- function(x){
+  ( x - min(x) ) / ( max(x) - min(x) )
+}
+
+Trainx <-  as.data.frame( trainn[,-1] )
+Trainx_scaled <- scale_norm(Trainx)
+
+test_scaled <- scale_norm(testt)
+Trainy <- as.factor(as.matrix(trainn[,1]))
+dat <- data.frame(y= Trainy, as.matrix(Trainx_scaled))
+
+# The following line takes couple of minutes!
+multnom <- multinom(y ~., data = dat, 
+                    maxit= 10, MaxNWts= 7860, 
+                    abstol= 10^(-2) )
+
+pred_multnom <- predict(multnom, newdata= test_scaled[,-1], type= 'probs')
+dim(pred_multnom)
+pred_multnom <- max.col(pred_multnom) # apply a maximum to determine the class
+pred_multnom <- pred_multnom - 1 # to convert to digits
+er <- mean(pred_multnom != testt[,1])
+print(paste('Accuracy', 1 - er))
+
+library(caret)
+library(e1071)
+confusion <- caret::confusionMatrix(data= factor(pred_multnom), reference=factor(testt[,1]))
+confusion$table
+```
+
+```{python c8}
+2+3
+
+```
+
+
+### First DL model with Keras
+```{r c4}
+# Now with keras
+library(reticulate)
+reticulate::py_discover_config()
+# use_python(python= "")
+library(tensorflow)
+library(keras)
+# tensorflow::tf_config()
+# tf$constant("Hellow Tensorflow")
+
+# convert, for training in keras
+y_train <- to_categorical(trainn[,1]) %>% as.matrix
+y_test <- to_categorical(testt[,1]) %>% as.matrix
+
+first_model <- keras_model_sequential() %>% 
+  layer_dense(units = 512, activation = "relu", input_shape = c(28*28)) %>% 
+  layer_dense(units = 10, activation = "softmax")
+
+first_model %>% compile(
+  optimizer = optimizer_sgd(), #optimizer_adam, 
+  loss = "categorical_crossentropy",
+  metrics = c("accuracy", "mse")
+)
+
+first_model %>% summary
+epochss <- 5 # change to 5 or 10. 
+first_model %>% fit(as.matrix(Trainx_scaled), 
+                    y_train, epochs = epochss, 
+                    batch_size = 128, verbose=1)
+
+evaluatee <- first_model %>% 
+  evaluate(as.matrix(test_scaled[,-1]), y_test, verbose=1)
+
+evaluatee
+
+###
+
+n_train <- NROW(x_train)
+n_test <- NROW(x_test)
+
+nr <- nc <- 28
+x_train <- keras::array_reshape(x_train, c(n_train, nr, nc, 1))
+x_test <- keras::array_reshape(x_test, c(n_test, nr, nc, 1))
+
+
+second_model <- keras_model_sequential()
+
+second_model %>%
+  layer_conv_2d(filters = 32, kernel_size = c(3,3), activation = 'relu',
+                input_shape = c(28,28,1)) %>% 
+  layer_conv_2d(filters = 64, kernel_size = c(3,3), activation = 'relu') %>% 
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>% 
+  layer_dropout(rate = 0.25) %>% 
+  layer_flatten() %>% 
+  layer_dense(units = 128, activation = 'relu') %>% 
+  layer_dropout(rate = 0.5) %>% 
+  layer_dense(units = 10, activation = 'softmax')
+
+
+second_model %>% compile(
+  loss = loss_categorical_crossentropy,
+  optimizer = optimizer_adam(),
+  metrics = c('accuracy')
+)
+
+# More specs
+
+epochss <- 5
+mini_batch_size <- 2^9
+
+second_model %>% fit(
+  x_train, y_train,
+  batch_size = mini_batch_size,
+  epochs = epochss,
+  verbose = 1
+)
+
+# Evaluate 
+evaluatee <- second_model %>% evaluate(
+  x_test, y_test, verbose = 1
+)
+
+
+```
