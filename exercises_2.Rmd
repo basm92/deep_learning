@@ -27,8 +27,6 @@ cost <- function(actual, prediction){
 
 ```
 
-
-
 ```{r}
 
 gradient_desc <- function(x, y, learn_rate, conv_threshold, n, max_iter) {
@@ -75,7 +73,6 @@ Set iteration number to 100 and the learning rate to 0.01. Initialize the interc
 gradient_desc(x, y, learn_rate = 0.01, 0.01, 1000, 100)
 
 ```
-
 
 Keep the history and plot the cost function over time.
 
@@ -128,9 +125,9 @@ plot_cost_function(x, y, 0.01, 0.001, 1000, 100)
 
 ## First neural network
 
-- Load the Boston data and split it using set.seed(55) again.
+-   Load the Boston data and split it using set.seed(55) again.
 
-```{r echo=FALSE}
+```{r message=FALSE, output=FALSE}
 library(MASS); library(tidyverse)
 boston <- MASS::Boston
 
@@ -138,28 +135,82 @@ boston <- boston %>%
   mutate(dummy = if_else(medv > 20, 1, 0))
 ```
 
-- Scale the data and create a confusion matrix based on the standard logistic regression.
+-   Scale the data and create a confusion matrix based on the standard logistic regression.
 
-- Create predictions (remember to scale also the test set). Report the accuracy.
-
+-   Create predictions (remember to scale also the test set). Report the accuracy.
 
 ## The remaining questions will be implemented in Python
 
-- Use the neuralnet package to create a simple neural network with 1 hidden layer, backprop algorithm, SSE cost function and a 0.1 learning rate parameter.
+-   Use the neuralnet package to create a simple neural network with 1 hidden layer, backprop algorithm, SSE cost function and a 0.1 learning rate parameter.
 
 ```{python}
+import pandas as pd
+import tensorflow as tf
+import numpy as np
+from tensorflow import keras
+from tensorflow.keras import layers
+
+from sklearn import preprocessing
+from sklearn.model_selection import train_test_split
+
+x_vars = pd.DataFrame(preprocessing.normalize(r.boston.iloc[:,0:13]))
+y_var = r.boston['dummy'].copy()
+
+X_train, X_test, y_train, y_test = train_test_split(
+  x_vars, y_var, test_size=0.5, 
+  random_state=55)
+
+```
+
+# build a neural network
+
+```{python}
+model = keras.Sequential()
+
+model.add(layers.Dense(
+    4, # Amount of Neurons
+    input_dim=13, # Define an input dimension because this is the first layer
+    activation='linear' # Use relu activation function because all inputs are positive
+))
+
+model.add(layers.Dense(
+    1, # Amount of Neurons. We want one output
+    activation='sigmoid' # Use sigmoid because we want to output a binary classification
+))
+
+model.compile(
+    loss='mean_squared_error', # The loss function that is being minimized
+    optimizer=tf.keras.optimizers.Adam(learning_rate=0.1),
+    metrics=['binary_accuracy', tf.keras.metrics.AUC()] 
+)
 
 
 ```
 
-- Report the accuracy of this network after predicting the test set.
+```{python}
+model.fit(
+    X_train, # Input training data
+    y_train, # Output training data
+    epochs=1000, # Amount of iterations we want to train for
+    verbose=0 # Amount of detail you want shown in terminal while training
+)
 
-- Now change the network architecture to c(8,2), which means 2 hidden layers with 8 and 2 neurons respectively. Is accuracy increased?
+```
 
-- Apply early stopping and check the accuracy again.
+-   Report the accuracy of this network after predicting the test set.
 
-- Plot model architecture.
+```{python}
+model.test_on_batch(X_test, y_test, return_dict=True)
 
+```
 
+-   Now change the network architecture to c(8,2), which means 2 hidden layers with 8 and 2 neurons respectively. Is accuracy increased?
 
+-   Apply early stopping and check the accuracy again.
 
+-   Plot model architecture.
+
+```{python}
+tf.keras.utils.plot_model(model)
+
+```
