@@ -1,0 +1,108 @@
+---
+title: "Exercises 1"
+author: "Bas Machielsen"
+date: '2022-07-11'
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Exercise 1 - Logistic Regression
+
+Use the Boston data (e.g. from the package MASS. Create a dependent dummy variable for house price which is is higher than 200K.
+
+```{r}
+library(MASS); library(tidyverse)
+boston <- MASS::Boston
+
+boston <- boston %>%
+  mutate(dummy = if_else(medv > 20, 1, 0))
+```
+
+Split the data (use set.seed(55)) into a train and a test set.
+
+- I do this through Python
+
+```{python}
+import random
+import numpy as np
+from sklearn.model_selection import train_test_split
+import statsmodels.api as sm
+import pandas as pd
+
+r.boston.iloc[:,0:13]
+
+X_train, X_test, y_train, y_test = train_test_split(
+  r.boston.iloc[:,0:13], r.boston.iloc[:,14], test_size=0.5, 
+  random_state=55)
+  
+```
+
+Based on the other variables in the data, predict whether a house would be priced over 200K or below.
+
+```{python}
+
+clf = sm.Logit(y_train, X_train).fit()
+
+clf.summary()
+
+```    
+
+
+Create a confusion matrix to evaluate the accuracy
+
+```{python}
+def confusion_matrix(y_test,x_test, logit_model, threshold=0.5):
+  
+  predictions = logit_model.predict(x_test)
+  
+  data = (pd.DataFrame(np.array([y_test, predictions]).
+  transpose(),
+  columns=['real','predict']))
+  
+  data['predict'] = data['predict'] > threshold
+  
+  predicted_no_actual_yes, predicted_yes_actual_yes = (
+    data.groupby('predict')['real'].apply(lambda x:
+      (x==1).sum()).reset_index(name='count').iloc[:,1])
+  predicted_no_actual_no, predicted_yes_actual_no = (
+    data.groupby('predict')['real'].apply(lambda x:
+      (x==0).sum()).reset_index(name='count').iloc[:,1] )
+  
+  
+  out = np.array([[predicted_yes_actual_yes, predicted_no_actual_yes],
+  [predicted_yes_actual_no, predicted_no_actual_no]])
+  
+  b_out = (pd.DataFrame(out, index=['actual_yes', 'actual_no'],
+  columns=['predicted_yes', 'predicted_no']))
+  return b_out
+  
+```
+
+
+```{python}
+confusion_matrix(y_test, X_test, clf)
+```
+
+## Activation Functions
+
+- What is the role of the activation function?
+
+To scale down the predicted values towards a reasonable range (e.g. $(0,1)$). 
+
+- Code yourself the sigmoid function, plot it (say for the [-5,5] range)
+
+- Code yourself the relu function, plot it.
+
+- Code yourself the leaky relu function, plot it.
+
+- Code yourself the swish function, plot it.
+
+- Compute and plot the derivatives of those functions2.
+
+- Recreate the softmax chart presented during the lecture.
+
+

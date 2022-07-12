@@ -1,0 +1,165 @@
+---
+title: "exercises_2"
+author: "Bas Machielsen"
+date: '2022-07-12'
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1
+
+```{r}
+set.seed(55)
+
+x <- runif(1000, -5, 5)
+y <- x + rnorm(1000) + 3
+```
+
+```{r}
+cost <- function(actual, prediction){
+  
+  return(mean((actual-prediction)^2))
+  
+}
+
+```
+
+
+
+```{r}
+
+gradient_desc <- function(x, y, learn_rate, conv_threshold, n, max_iter) {
+  plot(x, y, col = "blue", pch = 20)
+  m <- 0
+  c <- 0
+  yhat <- m * x + c
+  MSE <- sum((y - yhat) ^ 2) / n
+  
+  converged = F
+  iterations = 0
+  while(converged == F) {
+    ## Implement the gradient descent algorithm
+    m_new <- m - learn_rate * ((1 / n) * (sum((yhat - y) * x)))
+    c_new <- c - learn_rate * ((1 / n) * (sum(yhat - y)))
+    m <- m_new
+    c <- c_new
+    yhat <- m * x + c
+    MSE_new <- sum((y - yhat) ^ 2) / n
+    
+    if(iterations %% 5 == 0){
+      abline(c,m)
+    }
+    if(MSE - MSE_new <= conv_threshold) {
+      abline(c, m) 
+      converged = T
+      return(paste("Optimal intercept:", c, "Optimal slope:", m))
+    }
+    iterations = iterations + 1
+    if(iterations > max_iter) { 
+      abline(c, m) 
+      converged = T
+      return(paste("Optimal intercept:", c, "Optimal slope:", m))
+    }
+  }
+}
+
+```
+
+Set iteration number to 100 and the learning rate to 0.01. Initialize the intercept and slope to zero.
+
+```{r}
+
+gradient_desc(x, y, learn_rate = 0.01, 0.01, 1000, 100)
+
+```
+
+
+Keep the history and plot the cost function over time.
+
+```{r}
+plot_cost_function <- function(x, y, learn_rate, conv_threshold, n, max_iter) {
+  
+  m <- 0
+  c <- 0
+  yhat <- m * x + c
+  MSE <- sum((y - yhat) ^ 2) / n
+  
+  mse_history <- vector(length = max_iter)
+  mse_history[1] <- MSE
+  
+  converged = F
+  iterations = 0
+  while(converged == F) {
+    ## Implement the gradient descent algorithm
+    m_new <- m - learn_rate * ((1 / n) * (sum((yhat - y) * x)))
+    c_new <- c - learn_rate * ((1 / n) * (sum(yhat - y)))
+    m <- m_new
+    c <- c_new
+    yhat <- m * x + c
+    MSE_new <- sum((y - yhat) ^ 2) / n
+    
+    if(MSE - MSE_new <= conv_threshold) {
+      converged = T
+      mse_history[iterations] <- MSE_new
+      plot(mse_history, type = "S")
+      return(paste("Optimal intercept:", c, "Optimal slope:", m))
+    }
+    iterations = iterations + 1
+    mse_history[iterations] <- MSE_new
+    
+    if(iterations > max_iter) { 
+      converged = T
+      mse_history[iterations] <- MSE_new
+      plot(mse_history, type = "S")
+      return(paste("Optimal intercept:", c, "Optimal slope:", m))
+    }
+  }
+  
+}
+
+```
+
+```{r}
+plot_cost_function(x, y, 0.01, 0.001, 1000, 100)
+```
+
+## First neural network
+
+- Load the Boston data and split it using set.seed(55) again.
+
+```{r echo=FALSE}
+library(MASS); library(tidyverse)
+boston <- MASS::Boston
+
+boston <- boston %>%
+  mutate(dummy = if_else(medv > 20, 1, 0))
+```
+
+- Scale the data and create a confusion matrix based on the standard logistic regression.
+
+- Create predictions (remember to scale also the test set). Report the accuracy.
+
+
+## The remaining questions will be implemented in Python
+
+- Use the neuralnet package to create a simple neural network with 1 hidden layer, backprop algorithm, SSE cost function and a 0.1 learning rate parameter.
+
+```{python}
+
+
+```
+
+- Report the accuracy of this network after predicting the test set.
+
+- Now change the network architecture to c(8,2), which means 2 hidden layers with 8 and 2 neurons respectively. Is accuracy increased?
+
+- Apply early stopping and check the accuracy again.
+
+- Plot model architecture.
+
+
+
+
