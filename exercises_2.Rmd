@@ -252,7 +252,7 @@ X_test = scaler.transform(X_test.reshape(-1, X_test.shape[-1])).reshape(X_test.s
 from matplotlib import pyplot
 for i in range(9):  
   pyplot.subplot(3, 3, i+1)
-  pyplot.imshow(train_X[i+5], cmap=pyplot.get_cmap('gray'))
+  pyplot.imshow(X_train[i+5], cmap=pyplot.get_cmap('gray'))
 
 pyplot.show()
 
@@ -296,7 +296,7 @@ model.compile(
 model.fit(
     X_train, # Input training data
     y_train, # Output training data
-    epochs=5, # Amount of iterations we want to train for
+    epochs=10, # Amount of iterations we want to train for
     verbose=1 # Amount of detail you want shown in terminal while training
 )
 
@@ -315,11 +315,5 @@ model.summary()
 ```
 
 - Keep all your chosen settings, but use the ADAM optimizer now.
-
-
-
-
-## Exercise 3
-
 
 
