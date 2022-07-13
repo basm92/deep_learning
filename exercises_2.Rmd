@@ -44,7 +44,7 @@ gradient_desc <- function(x, y, learn_rate, conv_threshold, n, max_iter) {
     c_new <- c - learn_rate * ((1 / n) * (sum(yhat - y)))
     m <- m_new
     c <- c_new
-    yhat <- m * x + c
+    yhat <- m * x 
     MSE_new <- sum((y - yhat) ^ 2) / n
     
     if(iterations %% 5 == 0){
@@ -315,3 +315,11 @@ model.summary()
 ```
 
 - Keep all your chosen settings, but use the ADAM optimizer now.
+
+
+
+
+## Exercise 3
+
+
+
