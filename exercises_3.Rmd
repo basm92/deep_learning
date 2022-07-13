@@ -37,6 +37,16 @@ from keras.datasets import mnist
 X_train.shape
 ```
 
+Normalize the data:
+
+```{python}
+from sklearn.preprocessing import MinMaxScaler
+
+
+scaler = MinMaxScaler()
+X_train = scaler.fit_transform(X_train.reshape(-1, X_train.shape[-1])).reshape(X_train.shape)
+X_test = scaler.transform(X_test.reshape(-1, X_test.shape[-1])).reshape(X_test.shape)
+```
 
 
 - You have already used Keras to create a first deep learning model for the MNIST data. Build on that code to create a convolutional neural network.
@@ -45,23 +55,19 @@ X_train.shape
 model = Sequential()
 
 # Processing
-model.add(Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same', input_shape=(32, 28, 28, 1)))
-model.add(Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
-model.add(MaxPooling2D((2, 2)))
-
-model.add(Conv2D(64, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
-model.add(Conv2D(64, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
+model.add(Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same', input_shape=(28, 28, 1)))
+model.add(Conv2D(16, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
 model.add(MaxPooling2D((2, 2)))
 
 # Classification
 model.add(Flatten())
-model.add(Dense(128, activation='relu', kernel_initializer='he_uniform'))
+model.add(Dense(256, activation='relu', kernel_initializer='he_uniform'))
 model.add(Dense(10, activation='softmax'))
 
 model.compile(
     loss= tf.keras.losses.SparseCategoricalCrossentropy(), # The loss function that is being minimized
     optimizer=tf.keras.optimizers.SGD(),
-    metrics=['accuracy', 'mse'] 
+    metrics=['accuracy', tf.keras.metrics.SparseCategoricalCrossentropy()] 
 )
 
 
@@ -80,15 +86,50 @@ model.fit(
 
 
 ```{python}
+X = tf.random.uniform((1, 28, 28, 1))
+
 for layer in model.layers:
     X = layer(X)
     print(layer.__class__.__name__,'output shape:\t', X.shape)
 
 ```
+
+```{python}
+from sklearn.metrics import confusion_matrix
+
+predictions = model.predict(X_test).argmax(axis = 1)
+
+confusion_matrix(y_test, predictions)
+```
+
 - Experiment with adding a pooling layer
 
 
 - Apply dropout to one of the layers. Use 0.25 dropout rate.
+
+```{python}
+model = Sequential()
+
+# Processing
+model.add(Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same', input_shape=(28, 28, 1)))
+model.add(Conv2D(16, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
+model.add(MaxPooling2D((2, 2)))
+
+model.add(Dropout())
+
+# Classification
+model.add(Flatten())
+model.add(Dense(256, activation='relu', kernel_initializer='he_uniform'))
+model.add(Dense(10, activation='softmax'))
+
+model.compile(
+    loss= tf.keras.losses.SparseCategoricalCrossentropy(), # The loss function that is being minimized
+    optimizer=tf.keras.optimizers.SGD(),
+    metrics=['accuracy', tf.keras.metrics.SparseCategoricalCrossentropy()] 
+)
+
+
+```
 
 
 - Try few configurations of the hyper parameters (optimization procedure, batch size, number of epochs, etc.).
