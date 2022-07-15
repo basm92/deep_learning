@@ -1,0 +1,138 @@
+---
+title: "exercises_4"
+author: "Bas Machielsen"
+date: '2022-07-14'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Exercises 4
+
+
+```{python}
+from numpy import array
+from tensorflow.keras.preprocessing.text import one_hot
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Flatten,Embedding,Dense
+
+import tensorflow as tf
+import keras
+
+```
+
+Load the data. You should have 2K files, first 1K are tagged negatively, the rest are tagged as positive.
+
+```{python}
+from string import punctuation
+from os import listdir
+from collections import Counter
+from nltk.corpus import stopwords
+ 
+# load doc into memory
+def load_doc(filename):
+	# open the file as read only
+	file = open(filename, 'r')
+	# read all text
+	text = file.read()
+	# close the file
+	file.close()
+	return text
+ 
+# turn a doc into clean tokens
+def clean_doc(doc):
+	# split into tokens by white space
+	tokens = doc.split()
+	# remove punctuation from each token
+	table = str.maketrans('', '', punctuation)
+	tokens = [w.translate(table) for w in tokens]
+	# remove remaining tokens that are not alphabetic
+	tokens = [word for word in tokens if word.isalpha()]
+	# filter out stop words
+	stop_words = set(stopwords.words('english'))
+	tokens = [w for w in tokens if not w in stop_words]
+	# filter out short tokens
+	tokens = [word for word in tokens if len(word) > 1]
+	return tokens
+ 
+# load doc and add to vocab
+def add_doc_to_vocab(filename, vocab):
+	# load doc
+	doc = load_doc(filename)
+	# clean doc
+	tokens = clean_doc(doc)
+	# update counts
+	vocab.update(tokens)
+ 
+# load all docs in a directory
+def process_docs(directory, vocab, is_trian):
+	# walk through all files in the folder
+	for filename in listdir(directory):
+		# skip any reviews in the test set
+		if is_trian and filename.startswith('cv9'):
+			continue
+		if not is_trian and not filename.startswith('cv9'):
+			continue
+		# create the full path of the file to open
+		path = directory + '/' + filename
+		# add doc to vocab
+		add_doc_to_vocab(path, vocab)
+ 
+# define vocab
+vocab = Counter()
+# add all docs to vocab
+process_docs('txt_sentoken/neg', vocab, True)
+process_docs('txt_sentoken/pos', vocab, True)
+
+```
+
+Explore the data. E.g. what are the most frequent words, what is a typical length for a review (in number of words)? Choose a random text and display it, before and after parsing.
+
+```{python}
+# print the size of the vocab
+print(len(vocab))
+# print the top words in the vocab
+print(vocab.most_common(50))
+
+```
+
+
+
+```{python}
+# save tokens to a vocabulary file
+# save list to file
+def save_list(lines, filename):
+	# convert lines to a single blob of text
+	data = '\n'.join(lines)
+	# open file
+	file = open(filename, 'w')
+	# write text
+	file.write(data)
+	# close file
+	file.close()
+	
+tokens = [i for i,j in vocab.items() if j > 2]
+save_list(tokens, 'vocab.txt')
+```
+
+
+Use the Keras tokenizer function to create a dictionary of the top, say, 30K most frequently used words. Use the texts_to_sequences function to transform the text into a series of integers.
+
+```{python}
+keras.texts_to_sequences(vocab)
+
+```
+
+Let’s use the first 600 words of each review as features. Pad each shorter review with zeros, use pad_sequences function for this.
+
+Split the sample into 2/3 training and 1/3 testing1.
+
+Create neural net which takes embeddings as an input, and predict the sentiment of the text. Vary the dimension of the embeddings.
+
+Report the accuracy. What is your benchmark?
+
+
+

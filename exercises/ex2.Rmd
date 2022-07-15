@@ -1,0 +1,134 @@
+---
+title: "Practical sessions"
+author: ""
+date: ''
+output: 
+  html_document:
+    toc: true
+    number_sections: false
+    theme: simplex
+    highlight: espresso
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# for generic R help and tutorials
+# help.start()
+
+#  Setup  --------------------
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# install.packages("magrittr")
+# install.packages("psych")
+library(magrittr)
+library(MASS)
+library(psych)
+
+```
+
+## Gradient Descent in action
+
+(a) Simulate some data:
+```{r chunk2, echo= T, tidy=F}
+x <- runif(1000, -5, 5)
+y <- x + rnorm(1000) + 3
+```
+
+(b) Create a squared root cost function.
+
+(c) Set iteration number to 100 and the learning rate to 0.01. Initialize the intercept
+and sloe to zero.
+
+(d) Loop through iterations and nudge the parameters based on the gradient.
+
+(e) Keep the history and plot the cost function over time.
+
+
+## First neural network
+
+(a) Load the Boston data and split it using `set.seed(55)` again.
+
+(b) Scale the data and create a confusion matrix based on the standard logistic
+regression.
+
+(c) Create predictions (remember to scale also the test set). Report the accuracy.
+
+(d) Use the `neuralnet` package to create a simple neural network with 1 hidden
+layer, `backprop` algorithm, SSE cost function and a 0.1 learning rate parameter.
+
+(e) Report the accuracy of this network after predicting the test set.
+
+(f) Now change the network architecture to c(8,2), which means 2 hidden layers
+with 8 and 2 neurons respectively. Is accuracy increased?
+
+(g) Apply early stopping and check the accuracy again.
+
+(h) Plot model architecture.
+
+## MNIST data
+
+The MNIST is a database of handwritten digits, and is commonly used for training various image processing systems. The training set contains 60K examples, and the text set contains 10K examples.
+
+(a) Load the data.
+
+(b) Create a `min_max_normalization` function, and apply it on the data.
+
+(c) Plot the few of the images^[You can, but you don’t have to, use the function provided in the Appendix].
+
+(d) Use the `nnet` package and perform multinomial regression.
+
+(e) Use the predict function to predict the test data.
+
+(f) Create a confusion matrix^[You can use the `caret` package for example], and compute the accuracy. We will later compare it
+to our neural network model.
+
+(g) Create a neural network model in Keras. Choose yourself the number of neurons,
+batch size, and the number of epochs. Use first a gradient descent optimizer.
+
+(h) Keep all your chosen settings, but use the ADAM optimizer now.
+
+
+##### Footnotes {#endnotes}
+
+<div id="refs"></div>
+
+#### Appendix
+
+```{r chunk3, echo= T, tidy=F}
+Show_label <- function(row, data) {
+  tmp <- data.frame(
+    x = rep(1:28, times = 28),
+    y = rep(28:1, each = 28),
+    shade = as.numeric(data[row, -1])
+  )
+  ggplot(data = tmp) +
+    geom_point(aes(x = x, y = y, color = shade),
+               size = 11,
+               shape = 15) + theme(
+                 waxis.line =
+                   element_blank(),
+                 axis.text.x = element_blank(),
+                 axis.text.y = element_blank(),
+                 axis.ticks = element_blank(),
+                 axis.title.x = element_blank(),
+                 axis.title.y = element_blank(),
+                 legend.position = "none",
+                 panel.background = element_blank(),
+                 panel.border = element_blank(),
+                 panel.grid.major = element_blank(),
+                 panel.grid.minor = element_blank(),
+                 plot.background = element_blank()
+               ) +
+    scale_color_gradient(low = "white", high = "black") +
+    geom_text(aes(x = 28, y = 28), label = data[row, 1])
+}
+```
+
+
+```{js jschunk, echo=FALSE}
+$(document).ready(function() {
+  $('.footnotes ol').appendTo('#endnotes');
+  $('.footnotes').remove();
+});
+```
+
+

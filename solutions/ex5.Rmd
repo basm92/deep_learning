@@ -1,0 +1,112 @@
+---
+title: "Exercise 5 solution"
+author: ""
+date: ""
+output: 
+html_document:
+  toc: true
+  number_sections: false
+  theme: simplex
+  highlight: espresso
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(magrittr)
+library(reticulate)
+library(tensorflow)
+library(keras)
+library(tidyverse)
+library(readr)
+```
+
+
+```{r GAN, cache= TRUE}
+
+sigmoid <- function(x) {
+X <- 1 / (1 + exp(-x))
+X
+}
+
+weightss <- rnorm(5) # 4 pixels and one bias
+faces = list(c(1,0,0,1),
+           c(0.9,0.1,0.2,0.8),
+           c(0.9,0.2,0.1,0.8),
+           c(0.8,0.1,0.2,0.9),
+           c(0.8,0.2,0.1,0.9))
+
+go_forward <- function(x){
+sigmoid( weightss %*% c(1, unlist(x) ) )
+}
+
+ii <- 1
+image(matrix(faces[[ii]], nrow=2, ncol=2), col= gray.colors(422) )
+
+d_weights <- weightss
+g_weights <- c(rep(0,4), weightss[-1])
+
+epochs <- 1000
+g_err <- sum_error <- NULL
+learning_rate <- 0.01
+# Update weights D based on real image
+for (i in 1:epochs){
+for (j in 1:4){
+  pred_real <- sigmoid( d_weights %*% c(1, unlist(faces[j]) ) ) # forward
+  
+  # We want the prediction to be 1, so the error is -log(prediction)
+  
+  d_err_real <- -log(pred_real) # error from image -- we don't really need it for update
+  
+  deriv_weights_real <- -c(1, unlist(faces[j]) ) * as.vector(1 - pred_real) # deriv weights
+  
+  d_weights <- d_weights - learning_rate * deriv_weights_real # update from image
+  
+  # generate fake one image
+  z <- runif(1)
+  fake <- NULL
+  for (k in 1:4){
+    fake[k] <- sigmoid( g_weights[k] + g_weights[ (k+4) ] * z )
+  }
+   
+  # calculate discriminator error from fake image
+  d_pred_fake <- sigmoid( d_weights %*% c(1, fake) ) 
+  # We want the prediction to be 0, so the error is -log(1-prediction)
+  d_err_fake <- -log(1 - d_pred_fake) # error from fake
+  
+  # sum the two errors
+  sum_error[i] <- d_err_real + d_err_fake
+  
+  # generator error # the other way, would like fake to be 1 so to mislead generator
+  g_err[i] <- -log(d_pred_fake) # notice how this error is the reverse of the generator error for the same prediction 
+  
+  # Update discriminator weights from fake
+  deriv_weights_fake <-  as.vector(d_pred_fake) * c(1, fake) # deriv weights
+  d_weights <- d_weights - learning_rate * deriv_weights_fake # update
+  
+  # Update generator weights # for some reason we don't update the bias: d_weights[-1]
+  deriv_weights_fake <- - c(1 - d_pred_fake) * d_weights[-1] * fake *  as.vector( 1 - fake ) * z 
+  g_weights[5:8] <- g_weights[5:8] - learning_rate * deriv_weights_fake
+  g_weights[1:4] <- g_weights[1:4] - learning_rate * deriv_weights_fake/z
+} }
+
+par(mfrow = c(2,1))
+plot(sum_error, ty= "l", main="Discriminator error")
+plot(g_err, ty= "l", main="Generator error")
+
+# let's check samples
+z <- runif(1)
+fake <- NULL
+for (k in 1:4){
+fake[k] <- sigmoid( g_weights[k] + g_weights[ (k+4) ] * z )
+}
+
+# fake
+image(matrix(fake, nrow=2, ncol=2), col= gray.colors(12) )  
+title(main = "fake")
+ii <- 2
+image(matrix(faces[[ii]], nrow=2, ncol=2), col= gray.colors(12) )
+title(main = "Real")
+
+```
+
+

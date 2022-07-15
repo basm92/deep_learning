@@ -1,0 +1,297 @@
+---
+title: "Exercise 4 solution"
+author: ""
+date: ""
+output: 
+  html_document:
+    toc: true
+    number_sections: false
+    theme: simplex
+    highlight: espresso
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(magrittr)
+library(reticulate)
+library(tensorflow)
+library(keras)
+library(tidyverse)
+library(readr)
+
+pdfpar <- function(bottomm = 2.1,
+                   leftt = 2.4,
+                   topp = 0.4,
+                   rightt = 0.6,
+                   rowss = 1,
+                   columnss = 1,
+                   fgg = grey(0.6),
+                   btyy = "o",
+                   m1 = 2,
+                   m2 = 0.9,
+                   m3 = 0,
+                   tcll = -0.4,
+                   ...) {
+  tempmar <- c(bottomm, leftt, topp, rightt)
+  return(
+    par(
+      mfrow = c(rowss, columnss),
+      mar = tempmar,
+      mgp = c(m1, m2, m3),
+      tcl = tcll,
+      las = 1,
+      bty = "n",
+      fg = fgg,
+      pch = 19,
+      bty = btyy,
+      ...
+    )
+  )
+}
+
+```
+
+
+```{r sentiment, cache = TRUE}
+# Data ----------
+# ~~~~~~~~~~~~~~~
+
+# Download the data to your computer from this link:
+# https://www.dropbox.com/sh/kgdqj19drrxltl1/AABRyvutxys0lKltKZcV5M36a?dl=0
+# tmp_path <- "link to where your data is located"
+tmp_path <- "Data/sentiment_dat"
+nam_labels <- list.files(tmp_path) 
+
+path_pos <- paste0(tmp_path,"/", nam_labels)[2]
+path_neg <- paste0(tmp_path,"/", nam_labels)[1]
+
+files_in_pos <- path_pos %>% list.files
+# files_in_pos %>% head
+# files_in_pos %>% tail
+
+files_in_neg <- path_neg %>% list.files
+# files_in_neg %>% head
+# files_in_neg %>% tail
+
+# Read individual files
+indi_files <- c( paste0(path_neg, "/", files_in_neg),  
+                 paste0(path_pos, "/", files_in_pos) )
+
+raw_texts <- lapply(indi_files, function(x) {
+  readChar( x, nchars= file.size(x) ) } 
+  )
+
+length(raw_texts)
+
+# Create tokenizer function
+tmpp_n_words <- 30000
+tokenizer <- text_tokenizer(num_words = tmpp_n_words) 
+vec_text <- raw_texts %>% unlist
+length(vec_text)
+ii <- 9
+vec_text[[ii]] %>% cat(file= "tmp.txt")
+file.show("tmp.txt")
+
+fit_tokenizer <- fit_text_tokenizer(tokenizer, vec_text)
+sequences <- texts_to_sequences(fit_tokenizer, vec_text)
+length(sequences)
+length(sequences[[ii]])
+sequences[[ii]] %>% head(55)
+plot(sequences[[ii]])
+
+lapply(sequences, length) %>% unlist %>% plot
+lapply(sequences, length) %>% unlist %>% summary
+tmpmin <- lapply(sequences, length) %>% which.min
+cat(vec_text[[tmpmin]])
+
+max_top_words <- 600
+features <- pad_sequences(sequences, maxlen = max_top_words, 
+                          padding = "post")
+dim(features)
+# features[1,]
+# features[2,]
+# we could probably do better by removing sequences that are mostly zeros
+
+# split the data
+set.seed(55)
+TT <- length(sequences)
+ind_in <- sample(1:TT, size= 0.7*TT) # two third
+ind_out <- (1:TT)[-ind_in] # one third
+# summary(sort(c(ind_in, ind_out))) # sanity check
+
+# Model ----------
+# ~~~~~~~~~~~~~~~~
+
+# https://www.youtube.com/watch?v=OuNH5kT-aD0&ab_channel=JeffHeaton
+
+k_clear_session()
+# K <- backend()
+# K$clear_session()
+
+embedd <- keras_model_sequential() %>%
+  layer_embedding(
+    input_dim = tmpp_n_words,  
+    input_length = max_top_words,   
+    output_dim = 20) %>%  # Up until now its inputs
+  layer_flatten() %>% # why do we need this row? (because it's a matrix)
+  layer_dense(units = 1, activation = "sigmoid")
+
+embedd %>% compile(
+  optimizer = "rmsprop",
+  loss = "binary_crossentropy",
+  metrics = "accuracy"
+)
+
+summary(embedd)
+
+# create the target label.
+y_lab <- c(rep(0,1000), rep(1,1000))
+
+# for the training
+y_train <- y_lab[ind_in] %>% as.matrix()
+
+# Some specs
+epochss= 15
+batch_sizee= 2^5
+
+embedd %>% keras::fit(x= features[ind_in,], y = y_train, 
+                      batch_size = batch_sizee, 
+                      epochs = epochss, 
+                      shuffle= F, 
+                      verbose = 1) 
+
+# Create predictions
+# pred <- keras::predict_classes(embedd, x= features[ind_out,], verbose= 1)
+
+pred <- embedd %>% predict(x= features[ind_out,]) %>% `>`(0.5) %>% k_cast("int32") %>% as.numeric
+
+confuse_tab <- table(y_actual = y_lab[ind_out], predictions = pred)
+(confuse_tab[1, 1] + confuse_tab[2, 2]) / sum(confuse_tab)
+
+# additional
+
+w <- embedd %>% get_layer(index = 1) %>% get_weights()
+dim(w[[1]])
+# fit_tokenizer %>% names
+dictt <- fit_tokenizer$word_index %>% unlist 
+names(dictt) %>% head
+names(dictt) %>% tail
+length(dictt)
+
+wordd <- "purpose"
+tmpind <- which( names(dictt) == wordd );tmpind
+
+tmp_word_dist <- NULL
+for (i in 1:tmpp_n_words){
+  tmp_word_dist[i] <- mean( (w[[1]][tmpind,] - w[[1]][i,])^2 )
+}
+
+tmpind <- order(tmp_word_dist) %>% head ; tmpind
+names(dictt)[tmpind]
+
+```
+
+
+## Autoencoders 
+
+```{r c3, cache = TRUE}
+# ~~~~~~~~~~~~~~~
+scale_norm <- function(x){
+  ( x - min(x) ) / ( max(x) - min(x) )
+}
+
+library(quantmod)
+
+k <- 10 # how many years back?
+end<- format(Sys.Date(),"%Y-%m-%d")
+start<-format(Sys.Date() - (k*365),"%Y-%m-%d")
+symetf = c('XLY', 'XLP', 'XLE', 'XLF', 'XLV', 'XLI', 'XLB', 'XLK', 'XLU')
+l <- length(symetf)
+w0 <- NULL
+for (i in 1:l) {
+  dat0 = getSymbols(
+    symetf[i],
+    src = "yahoo",
+    from = start,
+    to = end,
+    auto.assign = F,
+    warnings = FALSE,
+    symbol.lookup = F
+  )
+  w1 <- dailyReturn(dat0)
+  w0 <- cbind(w0, w1)
+}
+time <- as.Date(substr(index(w0), 1, 10))
+w0 <- as.matrix(w0)
+colnames(w0) <-  symetf
+
+x <- scale_norm(w0)
+head(x)
+cor(x)
+
+TT <- NROW(x)	
+P <- NCOL(x)
+
+#  ~ Model ~~~~~~~~~~~~~~
+
+num_features <- 9
+input_size = P
+output_size = P
+epochss <- 1000
+batch_sizee <- 2^9
+
+inputt = layer_input(shape = P)
+outputt <- inputt %>% layer_dense(units=num_features, activation = "relu") %>% layer_dense(units=P, activation = "sigmoid") 
+
+AE1 = keras_model(inputt, outputt)
+summary(AE1) 	
+
+AE1 %>% compile(optimizer= "adam", loss= "mean_squared_error")
+AE1 %>% fit(x, x, epochs=epochss, batch_size= batch_sizee, verbose=0) 
+
+pred_ae <-  predict(AE1, x= x)
+head(pred_ae) 
+
+pdfpar()
+# par(mfrow = c(5, 2))
+for (ii in 2) {
+  plot(x[, ii], ylab = "", main = symetf[[ii]])
+  points(pred_ae[, ii], col = 4, cex = 0.8)
+}
+
+squared_error <- (pred_ae - x) ^ 2
+error_for_days <- apply(squared_error, 1 , sum)
+
+num_outliers <- 20
+tmp_dates <- time[order(error_for_days) %>% tail(num_outliers)]
+tmp_ind <- time %in% tmp_dates
+
+par(mfrow=c(3,3))
+for (ii in 1:P) {
+  plot(w0[,ii] ~ time, ylab= "", main= symetf[[ii]])
+  points(w0[tmp_ind,ii] ~ time[tmp_ind], col= 4, pch= 19)
+}
+
+
+```
+
+## Let's do PCA 
+
+```{r pca0}
+dim(x)
+pc0 <- prcomp(x)
+names(pc0)
+# These are the loadings
+pc0$rot
+# Let's revert\construct the original variables using few pc's
+ii <- 8 # using ii factors
+x_back <- pc0$x[, 1 : ii] %*% t(pc0$rotation[,1:ii])
+par(mfrow=c(1,1))
+jj <- 1 # Let's plot the jj variable (jj from 1 to P)
+plot(x_back[,jj], x[,jj])
+
+```
+
+
+
+

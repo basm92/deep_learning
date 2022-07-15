@@ -1,0 +1,58 @@
+---
+title: "Practical sessions"
+author: ""
+date: ''
+output: 
+  html_document:
+    toc: true
+    number_sections: false
+    theme: simplex
+    highlight: espresso
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# for generic R help and tutorials
+help.start()
+
+#  Setup  --------------------
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# install.packages("magrittr")
+# install.packages("psych")
+library(magrittr)
+library(MASS)
+library(psych)
+
+```
+
+## Logistic regression
+
+(a) Use the Boston data (e.g. from the package MASS. Create a dependent dummy variable for house
+price which is is higher than 200K.
+
+(b) Split the data (use `set.seed(55)`) into a train and a test set.
+
+(c) Based on the other variables in the data, predict whether a house would be priced over 200K or
+below.
+
+(d) Create a confusion matrix to evaluate the accuracy.
+
+
+## Activation functions
+
+Activation functions are one of the most essential elements in deep learning.
+
+(a) What is the role of the activation function?
+
+(b) Code yourself the sigmoid function, plot it (say for the [-5,5] range)^[Option: use the `curve` function.].
+
+(c) Code yourself the relu function, plot it.
+
+(d) Code yourself the leaky relu function, plot it. 
+
+(e) Code yourself the swish function, plot it.
+
+(f) Compute and plot the derivatives of those functions^[Option: use the `Deriv` function from the package by the same name].
+
+(g) Recreate the softmax chart presented during the lecture.
+
