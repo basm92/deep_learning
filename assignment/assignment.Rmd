@@ -9,7 +9,6 @@ output: pdf_document
 
 In this short report, I outline my efforts for the Deep Learning Summer School assignment. Our job was to predict housing prices on the basis of 29 explanatory variables. I used the TensorFlow library implemented in Python (3.7.6) to train my deep learning model. 
 
-
 ```{python, echo = FALSE}
 import pandas as pd
 import tensorflow as tf
@@ -105,7 +104,7 @@ As for the loss, I (of course) specified logarithmic MSE loss as the objective f
 
 After submitting, it turned out the accuracy was lower on the testing dataset, on which I received a logarithmic MSE of 0.22, meaning the predictions were 22\% off on average. Considering the small difference in performance between my training and validation samples, I do not think overfitting is the reason. There might be different reasons for the lack of generalizability. Maybe the sample is materially different, or the parameter space has been insufficiently explored to create truly generalizable predictions. 
 
-Thank you for reading!
+The code for this assignment can be found in an Rmd file [**here**](https://github.com/basm92/deep_learning/blob/master/assignment/assignment_machielsen.Rmd). Thank you for reading!
 
 ```{python, echo = FALSE, cache=TRUE, results='hide'}
 model.fit(
